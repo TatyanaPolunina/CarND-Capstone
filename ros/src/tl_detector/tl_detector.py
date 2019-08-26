@@ -24,7 +24,6 @@ class TLDetector(object):
         self.waypoints = None
         self.camera_image = None
         self.lights = []
-        self.study = True;
 
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
@@ -84,33 +83,25 @@ class TLDetector(object):
         self.camera_image = msg
         
         
-        if not self.study:
-            light_wp, state = self.process_traffic_lights()
+        light_wp, state = self.process_traffic_lights()
 
-            '''
-            Publish upcoming red lights at camera frequency.
-            Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
-            of times till we start using it. Otherwise the previous stable state is
-            used.
-            '''
-            if self.state != state:
-                self.state_count = 0
-                self.state = state
-            elif self.state_count >= STATE_COUNT_THRESHOLD:
-                self.last_state = self.state
-                light_wp = light_wp if state == TrafficLight.RED else -1
-                self.last_wp = light_wp
-                self.upcoming_red_light_pub.publish(Int32(light_wp))
-            else:
-                self.upcoming_red_light_pub.publish(Int32(self.last_wp))
-            self.state_count += 1
+        '''
+        Publish upcoming red lights at camera frequency.
+        Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
+        of times till we start using it. Otherwise the previous stable state is
+        used.
+        '''
+        if self.state != state:
+            self.state_count = 0
+            self.state = state
+        elif self.state_count >= STATE_COUNT_THRESHOLD:
+            self.last_state = self.state
+            light_wp = light_wp if state == TrafficLight.RED else -1
+            self.last_wp = light_wp
+            self.upcoming_red_light_pub.publish(Int32(light_wp))
         else:
-            cur_time = rospy.get_time()
-            time_diff = cur_time - self.last_time   
-            #write the image each two seconds 
-            self.serialize_image()
-            self.last_time = cur_time
-        
+            self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+        self.state_count += 1
 
     def get_closest_waypoint(self, pose):
         """Identifies the closest path waypoint to the given position
@@ -168,6 +159,7 @@ class TLDetector(object):
         wp_index = None;
         if self.waypoint_tree is None:
             return -1, TrafficLight.UNKNOWN
+        closest_light = None
 
         # List of positions that correspond to the line to stop in front of for a given intersection
         stop_line_positions = self.config['stop_line_positions']
@@ -188,38 +180,7 @@ class TLDetector(object):
             if closest_light:
                 color = self.get_light_state(closest_light)
                 return light_wp_idx, color
-        return -1, TrafficLight.UNKNOWN
-        
-        
-    def serialize_image(self):
-        wp_index = None;
-        closest_light = None;
-        if self.waypoint_tree is None:
-            return
-
-        # List of positions that correspond to the line to stop in front of for a given intersection
-        stop_line_positions = self.config['stop_line_positions']
-        if(self.pose):
-            wp_idx = self.get_closest_waypoint([self.pose.pose.position.x, self.pose.pose.position.y] )
-            closest_diff = LOOKAHEAD_FOR_TRAFFIC_LIGHT
-            for i in range(len(self.lights)):
-                light_pos = stop_line_positions[i]
-                light_idx = self.get_closest_waypoint(light_pos)
-                if light_idx < wp_idx + 3:
-                    continue;
-                diff = light_idx - wp_idx
-                if diff < closest_diff:
-                    closest_diff = diff
-                    closest_light = self.lights[i]
-                    light_wp_idx = light_idx
-                    
-            if closest_light:
-                color = closest_light.state
-                cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
-                rospy.logwarn("/home/student/tr{0}/img_{1}.jpg".format(color, self.img_indices[color]));
-                cv2.imwrite("/home/student/tr{0}/img_{1}.jpg".format(color, self.img_indices[color]),  cv_image, [cv2.IMWRITE_JPEG_QUALITY, 100])
-                self.img_indices[color] = self.img_indices[color] + 1
-            
+        return -1, TrafficLight.UNKNOWN          
 
 if __name__ == '__main__':
     try:
