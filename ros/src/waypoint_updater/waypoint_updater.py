@@ -34,7 +34,7 @@ class WaypointUpdater(object):
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
-        rospy.Subscriber('/traffic_lights', Int32, self.traffic_cb)
+        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
 
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
@@ -43,7 +43,7 @@ class WaypointUpdater(object):
         self.base_waypoints = None;
         self.waypoints_2d = None;
         self.waypoint_tree = None;
-        self.stop_line_wp = None;
+        self.stop_line_wp = -1;
 
         self.loop()
 
@@ -61,7 +61,6 @@ class WaypointUpdater(object):
         closest_idx = self.waypoint_tree.query(pos, 1)[1]
         
         closest_coord = self.waypoints_2d[closest_idx]
-        #rospy.logwarn('pos {0} idx {1} closest {2}'.format(pos, closest_idx, closest_coord))
         prev_coord = self.waypoints_2d[(closest_idx - 1) % len(self.waypoints_2d)]
         cl_vec = np.array(closest_coord)
         prev_vec = np.array(prev_coord)
@@ -83,7 +82,7 @@ class WaypointUpdater(object):
         closest_wp_index = self.get_closestwaypoint_index()
         last_index = closest_wp_index + LOOKAHEAD_WPS
         base_waypoints = self.base_waypoints.waypoints[closest_wp_index: last_index]
-        if (self.stop_line_wp is None or self.stop_line_wp > last_index):
+        if (self.stop_line_wp == -1 or self.stop_line_wp > last_index):
             lane.waypoints = base_waypoints
         else:
             dist_to_light = self.stop_line_wp - closest_wp_index
@@ -93,7 +92,7 @@ class WaypointUpdater(object):
     def decelerate(self, waypoints, dist_to_light):
         lane_wps = []
         dist_to_stop = max(0, dist_to_light - 2)
-        for i in range(waypoints):
+        for i in range(len(waypoints)):
             wp = Waypoint()
             wp.pose = waypoints[i].pose
             dist = self.distance(waypoints, i, dist_to_stop)
@@ -113,7 +112,7 @@ class WaypointUpdater(object):
         self.base_waypoints = waypoints
 
     def traffic_cb(self, msg):
-       self.stop_line_wp = msg
+       self.stop_line_wp = msg.data
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later

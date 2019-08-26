@@ -12,17 +12,18 @@ class Controller(object):
                  accel_limit, wheel_radius, wheel_base, steer_ratio, max_lat_accel, max_steer_angle):
         self.yaw_controller = YawController(wheel_base, steer_ratio, 0.1, max_lat_accel, max_steer_angle);
         
-        kp = 0.3
-        ki = 0.1
-        kd = 0.0
+        kp = 0.2
+        ki = 0.04
+        kd = 0.1
         mn = 0.0
-        mx = 0.2
+        mx = accel_limit
         self.pid_controller = PID(kp, ki, kd, mn, mx);
         self.lpf = LowPassFilter(0.5, 0.02)
         self.last_time = rospy.get_time();
         self.decel_limit = decel_limit
         self.vehicle_mass = vehicle_mass
         self.wheel_radius = wheel_radius
+        
         
         
     def control(self, dbw_enabled, current_vel, linear_vel, angular_vel):
