@@ -14,7 +14,7 @@ class Controller(object):
         
         kp = 0.2
         ki = 0.04
-        kd = 0.1
+        kd = 0.02
         mn = 0.0
         mx = accel_limit
         self.pid_controller = PID(kp, ki, kd, mn, mx);

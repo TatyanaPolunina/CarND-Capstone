@@ -1,8 +1,10 @@
 #from styx_msgs.msg import TrafficLight
+import rospy
 import tensorflow as tf
 import os
 import cv2
 import numpy as np
+
 from keras.models import load_model
 
 
@@ -10,11 +12,12 @@ from keras.models import load_model
 object_detection_graph_model = "/frozen_inference_graph.pb"
 
 class TLClassifier(object):
-    def __init__(self):
+    def __init__(self, model_name):
     
         current_path = os.path.dirname(os.path.realpath(__file__))
-        self.model = load_model(current_path + "/sim_model.h5", compile=False);
+        self.model = load_model(current_path + '/' + model_name, compile=False);
         self.object_detection_graph = tf.Graph()
+        self.class_graph =  tf.get_default_graph();
        
         # load 
         with self.object_detection_graph.as_default():
@@ -39,9 +42,12 @@ class TLClassifier(object):
             return -1;
         if (path_to_save is not None):
             cv2.imwrite(path_to_save, traffic_light_image)
+        #rospy.logwarn(traffic_light_image.shape)
         traffic_light_image = cv2.resize(traffic_light_image, (48,96))
         img_resize = np.expand_dims(traffic_light_image, axis=0)
-        prediction = np.argmax(self.model.predict(img_resize, batch_size=1));
+        with self.class_graph.as_default():
+            prediction = np.argmax(self.model.predict(img_resize, batch_size=1));
+        #rospy.logwarn(prediction)
         return prediction
         
     def get_traffic_light_image(self, image):
@@ -62,7 +68,7 @@ class TLClassifier(object):
             detection_scores = np.squeeze(detection_scores)
 
             tf_image = None
-            detection_threshold = 0.4
+            detection_threshold = 0.1
 
             # Find first detection of signal. It's labeled with number 10
             idx = -1
@@ -70,6 +76,8 @@ class TLClassifier(object):
                 if cl == 10:
                     idx = i;
                     break;
+            
+            #print(detection_scores[idx]);
 
             if idx == -1 or detection_scores[idx] < detection_threshold:
                 return None # we are not confident of detection
