@@ -113,4 +113,37 @@ This package contains the waypoint updater node: ```waypoint_updater.py```. The 
 
 Carla is equipped with a drive-by-wire (dbw) system, meaning the *throttle*, *brake*, and *steering* have electronic control. This package contains the files that are responsible for control of the vehicle: the node ```dbw_node.py``` and the file ```twist_controller.py```, along with a pid and lowpass filter. The ```dbw_node``` subscribes to the ```/current_velocity``` topic along with the ```/twist_cmd topic``` to receive target linear and angular velocities. Additionally, this node will subscribe to ```/vehicle/dbw_enabled```, which indicates if the car is under dbw or driver control. This node will publish *throttle*, *brake*, and *steering* commands to the ```/vehicle/throttle_cmd```, ```/vehicle/brake_cmd```, and ```/vehicle/steering_cmd``` topics.
 
+###Traffic lights detection
+
+The traffic light detection consists of two main steps:
+1. Identify if we have traffic light in the nearest behind waypoint interval
+2. In case traffic light is presented - identify the color of it.
+
+The first step is presented inside ```tl_detector.py``` inside *process_traffic_lights* method. If the traffic light is detected in the nearest interval, ```tl_classfier``` is used to identify the light
+
+#### Traffic light classification
+
+```TLClassifier``` do the classification staff with two main steps:
+
+1. Define the traffic lights bounding box
+2. Classify the color of the traffic light_classification_model
+
+For the first step pretrained object detection TF model is used based on [COCO dataset](http://cocodataset.org/). The fastest pretrained model ```ssd_mobilenet_v1_coco``` was chosen from the [model zoo](https://github.com/tensorflow/models/blob/477ed41e7e4e8a8443bc633846eb01e2182dc68a/object_detection/g3doc/detection_model_zoo.md). From the [label map](https://github.com/tensorflow/models/blob/477ed41e7e4e8a8443bc633846eb01e2182dc68a/object_detection/data/mscoco_label_map.pbtxt) we can find that traffic light object should be defined with tag "10". So current model is used to define bounding box without any modifications.
+It's  completely enough for simulator data to use this model with *detection score = 0.3*. But for real data lower detection score may be needed.
+
+If bounding box is defined the image is extracted from this box and resized to the image with size (48,96) as image with this size is needed as input to classification model. There is two pretrained models presented inside:
+* ```sim_model.h5``` for the simulator data
+* ```real_model.h5``` for the real data
+
+###Traffic lights classifier model
+To train both of models the data gathered by [Vatsal Srivastava](https://github.com/coldKnight/TrafficLight_Detection-TensorFlowAPI#get-the-models) was used
+The existing model uses transer learning concept and use VGG pretrained model inside implemented by keras:
+* convolution layer is added
+* than pretrained VGG model is used
+* two fully connected layers were added
+* softmax activation function from three outputs 
+
+I understand that as we have only three output classes maybe current model is overcomplicated and in case of performance issues need to be reworked to some simple LeNet style model. But presented model show quite good results now in any case.
+
+
 
