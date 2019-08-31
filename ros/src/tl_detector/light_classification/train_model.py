@@ -10,9 +10,9 @@ import tensorflow as tf
 from sklearn.utils import shuffle
 import yaml
 
-folder = '/mnt/shared/real_training_data/'
-model_name = "real_model.h5"
-yaml_name = 'real_data_annotations.yaml'
+folder = '/mnt/shared/sim_training_data/'
+model_name = "sim_model.h5"
+yaml_name = 'sim_data_annotations.yaml'
 
 #read the data info from csv file
 
@@ -25,6 +25,8 @@ def get_class(class_str):
         return 0;
     return 0;
     
+    
+#read the data generator
 def read_the_data():
     samples = []
     with open(folder+yaml_name, 'r') as stream:
@@ -48,6 +50,7 @@ def read_the_data():
     train_samples, validation_samples = train_test_split(samples, test_size=0.2)
     return train_samples, validation_samples
     
+# red, yelow, green
 labels = [[1,0,0], [0,1,0], [0,0,1]]
 
 #load batch samples data generaton

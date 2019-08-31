@@ -30,6 +30,8 @@ class PID(object):
             val = self.min
         else:
             self.int_val = integral
+        self.last_error = error
+        
         return val
         
     def tuneParams(self, change_p, change_i, change_d, delta):

@@ -7,9 +7,10 @@ import numpy as np
 
 from keras.models import load_model
 
-
+#pretrained tf model for object generation
 
 object_detection_graph_model = "/frozen_inference_graph.pb"
+TRAFFIC_LIGHT_LABEL = 10
 
 class TLClassifier(object):
     def __init__(self, model_name):
@@ -19,14 +20,14 @@ class TLClassifier(object):
         self.object_detection_graph = tf.Graph()
         self.class_graph =  tf.get_default_graph();
        
-        # load 
+        # load  pretrained object generation model
         with self.object_detection_graph.as_default():
             gdef = tf.GraphDef()
             with open(current_path + object_detection_graph_model, 'rb') as f:
                 gdef.ParseFromString( f.read() )
                 tf.import_graph_def( gdef, name="" )
 
-            #get names of nodes. 
+            #define the names of model nodes. 
             self.session = tf.Session(graph=self.object_detection_graph )
             self.image_tensor = self.object_detection_graph.get_tensor_by_name('image_tensor:0')
             self.boxes =  self.object_detection_graph.get_tensor_by_name('detection_boxes:0')
@@ -35,24 +36,26 @@ class TLClassifier(object):
             self.num_detections    = self.object_detection_graph.get_tensor_by_name('num_detections:0')
 
 
-
+    #classify the bounding box
     def get_classification(self, image, path_to_save = None):
+        #extract traffic light image from the initial image
         traffic_light_image = self.get_traffic_light_image(image)
         if (traffic_light_image is None):
             return -1;
         if (path_to_save is not None):
             cv2.imwrite(path_to_save, traffic_light_image)
-        #rospy.logwarn(traffic_light_image.shape)
+        #resize to model input
         traffic_light_image = cv2.resize(traffic_light_image, (48,96))
         img_resize = np.expand_dims(traffic_light_image, axis=0)
+        #predict the color of traffic light
         with self.class_graph.as_default():
             prediction = np.argmax(self.model.predict(img_resize, batch_size=1));
         #rospy.logwarn(prediction)
         return prediction
         
+    #extract traffic light image from initial image
     def get_traffic_light_image(self, image):
-        """ Use pretrained TF model to localize the objects        """
-
+        
         with self.object_detection_graph.as_default():
             #switch from BGR to RGB. Important otherwise detection won't work
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
@@ -68,21 +71,21 @@ class TLClassifier(object):
             detection_scores = np.squeeze(detection_scores)
 
             tf_image = None
-            detection_threshold = 0.1
+            #for sim images threshold could be bigger for real images even 0.1
+            detection_threshold = 0.2
 
             # Find first detection of signal. It's labeled with number 10
             idx = -1
             for i, cl in enumerate(detection_classes.tolist()):
-                if cl == 10:
+                if cl == TRAFFIC_LIGHT_LABEL:
                     idx = i;
                     break;
-            
-            #print(detection_scores[idx]);
 
             if idx == -1 or detection_scores[idx] < detection_threshold:
-                return None # we are not confident of detection
+                return None # traffic ligth wasn't found
             else:
                 img_shape = image.shape[0:2]
+                #boxes recieved in [0,1] interval, need the image coordinates
                 img_box = to_image_coords(detection_boxes[idx], img_shape[0], img_shape[1]);
                 light_image = image[img_box[0]:img_box[2], img_box[1]:img_box[3]]
                 return light_image;
