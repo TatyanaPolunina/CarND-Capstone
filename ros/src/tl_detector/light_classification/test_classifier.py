@@ -5,7 +5,7 @@ import os
 
 
 
-classifier = TLClassifier()
+classifier = TLClassifier("sim_model.h5")
 print(sys.argv[1])
 image = cv2.imread(sys.argv[1], cv2.IMREAD_COLOR)
 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
