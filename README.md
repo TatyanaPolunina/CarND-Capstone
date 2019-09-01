@@ -103,39 +103,39 @@ Below is a brief overview of the repo structure, along with descriptions of the 
 
 This package contains the traffic light detection node: ```tl_detector.py```. This node takes in data from the ```/image_color```, ```/current_pose```, and ```/base_waypoints``` topics and publishes the locations to stop for red traffic lights to the /traffic_waypoint topic.
 
-The ```/current_pose topic provides``` the vehicle's current position, and ```/base_waypoints``` provides a complete list of waypoints the car will be following.
+The ```/current_pose``` topic provides the vehicle's current position, and ```/base_waypoints``` provides a complete list of waypoints the car will be following.
 
 To detect the lights ```tl_detector/light_classification_model/tl_classfier.py``` is used
 
-#### **/ros/src/waypoint_updater/**
+#### **/ros/src/waypoint_updater**
 This package contains the waypoint updater node: ```waypoint_updater.py```. The purpose of this node is to update the target velocity property of each waypoint based on traffic light detection data. This node will subscribe to the ```/base_waypoints```, ```/current_pose``` and ```/traffic_waypoint topics```, and publish a list of waypoints ahead of the car with target velocities to the ```/final_waypoints``` topic.
 
-#### **/ros/src/twist_controller/**
+#### **/ros/src/twist_controller**
 
-Carla is equipped with a drive-by-wire (dbw) system, meaning the *throttle*, *brake*, and *steering* have electronic control. This package contains the files that are responsible for control of the vehicle: the node ```dbw_node.py``` and the file ```twist_controller.py```, along with a pid and lowpass filter. The ```dbw_node``` subscribes to the ```/current_velocity``` topic along with the ```/twist_cmd topic``` to receive target linear and angular velocities. Additionally, this node will subscribe to ```/vehicle/dbw_enabled```, which indicates if the car is under dbw or driver control. This node will publish *throttle*, *brake*, and *steering* commands to the ```/vehicle/throttle_cmd```, ```/vehicle/brake_cmd```, and ```/vehicle/steering_cmd``` topics.
+Carla is equipped with a drive-by-wire (dbw) system, meaning the *throttle*, *brake*, and *steering* have electronic control. This package contains the files that are responsible for control of the vehicle: the node ```dbw_node.py``` and the file ```twist_controller.py```. The ```dbw_node``` subscribes to the ```/current_velocity``` topic along with the ```/twist_cmd``` topic to receive target linear and angular velocities. Additionally, this node subscribes to ```/vehicle/dbw_enabled```, which indicates if the car is under dbw or driver control. This node will publish *throttle*, *brake*, and *steering* commands to the ```/vehicle/throttle_cmd```, ```/vehicle/brake_cmd```, and ```/vehicle/steering_cmd``` topics.
 
 ### Traffic lights detection
 
 The traffic light detection consists of two main steps:
-1. Identify if we have traffic light in the nearest behind waypoint interval
+1. Identify if we have traffic light behind waypoint interval taking into account current vehicle and traffic light coordinates
 2. In case traffic light is presented - identify the color of it.
 
-The first step is presented inside ```tl_detector.py``` inside *process_traffic_lights* method. If the traffic light is detected in the nearest interval, ```tl_classfier``` is used to identify the light
+The first step is presented inside ```tl_detector.py``` in *process_traffic_lights* method. If the traffic light is detected in the nearest interval, ```tl_classfier``` is used to identify the light
 
 ### Traffic light classification
 
 ```TLClassifier``` do the classification staff with two main steps:
 
-1. Define the traffic lights bounding box
+1. Define the traffic light bounding box
 2. Classify the color of the traffic light using classification model
 
 For the first step pretrained object detection TF model is used based on [COCO dataset](http://cocodataset.org/). The fastest pretrained model ```ssd_mobilenet_v1_coco``` was chosen from the [model zoo](https://github.com/tensorflow/models/blob/477ed41e7e4e8a8443bc633846eb01e2182dc68a/object_detection/g3doc/detection_model_zoo.md). 
 
-From the [label map](https://github.com/tensorflow/models/blob/477ed41e7e4e8a8443bc633846eb01e2182dc68a/object_detection/data/mscoco_label_map.pbtxt) we can find that traffic light object should be defined with tag "10". So current model is used to define bounding box without any modifications.
+From the [label map](https://github.com/tensorflow/models/blob/477ed41e7e4e8a8443bc633846eb01e2182dc68a/object_detection/data/mscoco_label_map.pbtxt) we can find that traffic light object should be defined with tag "10". So current model is used to define traffic light bounding box without any modifications.
 
-It's  completely enough for simulator data to use this model with *detection score = 0.4*. But for real data lower detection score may be needed.
+It's  completely enough for simulator data to use this model with *detection score = 0.3*. But for real data lower detection score may be needed.
 
-If bounding box is defined the image is extracted from this box and resized to the image with size (48,96) because images with this size is needed as input to precompiled classification model. There is two pretrained models presented inside:
+If bounding box is defined the image is extracted from this box and resized to the image with size (48,96) because images with current size are needed as input to precompiled classification model. There is two pretrained models presented inside:
 * ```sim_model.h5``` for the simulator data
 * ```real_model.h5``` for the real data
 
@@ -143,12 +143,12 @@ If bounding box is defined the image is extracted from this box and resized to t
 
 To train both of the models the data gathered by [Vatsal Srivastava](https://github.com/coldKnight/TrafficLight_Detection-TensorFlowAPI#get-the-models) was used.
 
-The presented model is implemented by keras and uses transer learning concept with VGG pretrained model inside, so has such steps:
+The presented model is implemented by keras and uses transer learning concept with VGG pretrained model inside, so has such architecture:
 
 * convolution layer
-* pretrained VGG model is used
+* pretrained VGG model
 * two fully connected layers
 * softmax activation function from three outputs 
 
-I understand that as we have only three output classes maybe current model is overcomplicated and in case of performance issues need to be reworked to some simple LeNet style model. But presented model show quite good results now in any case.
+I understand that as we have only three output classes maybe current model is overcomplicated and in case of performance issues need to be reworked to some simple LeNet style model. But presented model show quite good results now.
 

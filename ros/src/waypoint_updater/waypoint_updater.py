@@ -27,6 +27,11 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 LOOKAHEAD_WPS = 100 # Number of waypoints we will publish.
 MAX_DECEL = 0.5
 
+def get_waypoint_velocity(waypoint):
+    return waypoint.twist.twist.linear.x
+
+def set_waypoint_velocity(waypoint, velocity):
+    waypoint.twist.twist.linear.x = velocity
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -98,7 +103,7 @@ class WaypointUpdater(object):
             dec_vel = math.sqrt(2 * MAX_DECEL * dist)
             if dec_vel < 1:
                 dec_vel = 0.0
-            wp.twist.twist.linear.x = min(dec_vel, wp.twist.twist.linear.x)
+            set_waypoint_velocity(wp, min(dec_vel, get_waypoint_velocity(wp)))
             lane_wps.append(wp)
         return lane_wps
                
@@ -115,12 +120,6 @@ class WaypointUpdater(object):
             self.stop_line_wp = msg.data
             rospy.loginfo("new stop line recieved {0}".format(self.stop_line_wp))
 
-
-    def get_waypoint_velocity(self, waypoint):
-        return waypoint.twist.twist.linear.x
-
-    def set_waypoint_velocity(self, waypoints, waypoint, velocity):
-        waypoints[waypoint].twist.twist.linear.x = velocity
 
     def distance(self, waypoints, wp1, wp2):
         dist = 0
