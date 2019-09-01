@@ -48,7 +48,7 @@ class WaypointUpdater(object):
         self.loop()
 
     def loop(self):
-        rate = rospy.Rate(2)
+        rate = rospy.Rate(50)
         while not rospy.is_shutdown():  
             if self.pose and self.base_waypoints:
                 closest_waypoint_index = self.get_closestwaypoint_index();
@@ -111,7 +111,9 @@ class WaypointUpdater(object):
         self.base_waypoints = waypoints
 
     def traffic_cb(self, msg):
-       self.stop_line_wp = msg.data
+       if (msg.data != self.stop_line_wp):
+            self.stop_line_wp = msg.data
+            rospy.loginfo("new stop line recieved {0}".format(self.stop_line_wp))
 
 
     def get_waypoint_velocity(self, waypoint):

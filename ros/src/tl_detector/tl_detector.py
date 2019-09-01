@@ -95,6 +95,7 @@ class TLDetector(object):
             if self.state != state:
                 self.state_count = 0
                 self.state = state
+                rospy.loginfo("light {0} {1}".format(light_wp, state))
             elif self.state_count >= STATE_COUNT_THRESHOLD:
                 self.last_state = self.state
                 light_wp = light_wp if state == TrafficLight.RED else -1
@@ -171,7 +172,7 @@ class TLDetector(object):
             for i in range(len(self.lights)):
                 light_pos = stop_line_positions[i]
                 light_idx = self.get_closest_waypoint(light_pos)
-                if light_idx < wp_idx + 1:
+                if light_idx < wp_idx:
                     continue;
                 diff = light_idx - wp_idx
                 if diff < closest_diff:
