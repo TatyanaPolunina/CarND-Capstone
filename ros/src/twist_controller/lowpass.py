@@ -10,11 +10,18 @@ class LowPassFilter(object):
     def get(self):
         return self.last_val
 
+    def reset(self):
+        self.last_val = 0.0
+        self.ready = False;
+
     def filt(self, val):
+        if (val < 0.1):
+            self.reset();
+            
         if self.ready:
             val = self.a * val + self.b * self.last_val
         else:
-            self.ready = True
-
+            if (val > 0.1):
+                self.ready = True
         self.last_val = val
         return val

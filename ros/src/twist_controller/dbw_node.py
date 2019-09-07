@@ -46,6 +46,7 @@ class DBWNode(object):
         steer_ratio = rospy.get_param('~steer_ratio', 14.8)
         max_lat_accel = rospy.get_param('~max_lat_accel', 3.)
         max_steer_angle = rospy.get_param('~max_steer_angle', 8.)
+        self.max_vel = rospy.get_param('~max_velocity', 10)
 
         self.steer_pub = rospy.Publisher('/vehicle/steering_cmd',
                                          SteeringCmd, queue_size=1)
@@ -77,7 +78,7 @@ class DBWNode(object):
         
     def current_velocity_cb(self, msg):
         self.current_vel = msg.twist.linear.x
-        
+
     def twist_cmd_cb(self, msg):
         self.linear_vel = msg.twist.linear.x
         self.angular_vel  = msg.twist.angular.z
@@ -86,6 +87,8 @@ class DBWNode(object):
         rate = rospy.Rate(50) # 50Hz
         while not rospy.is_shutdown():
             if not (self.current_vel is None or self.linear_vel is None or self.angular_vel is None):
+                if (self.current_vel * 3.6 > self.max_vel):
+                    rospy.loginfo("current velocity {0} {1} {2})".format(self.current_vel, self.linear_vel, self.dbw_enabled))
                 throttle, brake, steering = self.controller.control(self.dbw_enabled,
                                                                self.current_vel, 
                                                                self.linear_vel,

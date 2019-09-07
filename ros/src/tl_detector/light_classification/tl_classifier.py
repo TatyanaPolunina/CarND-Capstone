@@ -72,7 +72,7 @@ class TLClassifier(object):
 
             tf_image = None
             #for sim images threshold could be bigger for real images even 0.1
-            detection_threshold = 0.2
+            detection_threshold = 0.1
 
             # Find first detection of signal. It's labeled with number 10
             idx = -1

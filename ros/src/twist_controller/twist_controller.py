@@ -13,9 +13,9 @@ class Controller(object):
         self.yaw_controller = YawController(wheel_base, steer_ratio, 0.1, max_lat_accel, max_steer_angle);
         
         kp = 0.2
-        ki = 0.04
-        kd = 0.02
-        mn = 0.0
+        ki = 0.01
+        kd = 0.09
+        mn = decel_limit
         mx = accel_limit
         self.pid_controller = PID(kp, ki, kd, mn, mx);
         self.lpf = LowPassFilter(0.5, 0.02)
@@ -25,13 +25,14 @@ class Controller(object):
         self.wheel_radius = wheel_radius
         
         
-        
     def control(self, dbw_enabled, current_vel, linear_vel, angular_vel):
         if not dbw_enabled:
-            self.pid_controller.reset();
+            self.pid_controller.reset()
+            self.lpf.reset()
             return 0., 0., 0
-            
-        current_vel = self.lpf.filt(current_vel)
+        
+        if (current_vel <= linear_vel):
+            current_vel = self.lpf.filt(current_vel)
         
         cur_time = rospy.get_time()
         time_diff = cur_time - self.last_time
@@ -47,8 +48,11 @@ class Controller(object):
         if linear_vel == 0.0 and current_vel < 0.1:
             brake = 400
             throttle = 0.0
-        elif vel_diff < 0 and throttle < 0.1:
+        elif vel_diff < 0:
             throttle = 0.0
             decel = max(self.decel_limit, vel_diff)
             brake = abs(decel) * self.vehicle_mass * self.wheel_radius
+            
+        if (vel_diff < 0):
+           rospy.loginfo("t {0} b {1} s {2} vel {3} {4}".format(throttle, brake, steering, current_vel, linear_vel))
         return throttle, brake, steering

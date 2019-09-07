@@ -33,8 +33,3 @@ class PID(object):
         self.last_error = error
         
         return val
-        
-    def tuneParams(self, change_p, change_i, change_d, delta):
-        self.kp += self.kp * change_p * delta
-        self.ki += self.ki * change_i * delta
-        self.kd += self.kd * change_d * delta
